@@ -1,0 +1,367 @@
+/* ── App shell ─────────────────────────────────────────────── */
+
+.app-shell {
+  display: flex;
+}
+
+.app-root {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* GoabPushDrawer's overlay-fix (see App.jsx) pins the panel itself with
+   position:fixed, so this backdrop is rendered alongside it to dim the
+   page and match the Figma reference — the component has no built-in
+   backdrop for its "push" layout mode (used above its internal 1023px
+   breakpoint). Below that breakpoint it falls back to its own overlay
+   with its own backdrop already, so ours must stay hidden there to avoid
+   double-dimming the page. */
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+
+@media (max-width: 1023px) {
+  .drawer-backdrop {
+    display: none;
+  }
+}
+
+.content-inner {
+  flex: 1;
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: var(--goa-space-xl) var(--goa-space-l) var(--goa-space-3xl);
+}
+
+/* ── Header user chip ─────────────────────────────────────────
+   Not a GoA component — the Figma "Account field" pattern has no
+   published React wrapper, so it's built here from design tokens
+   (border/radius/colour/spacing) to match the design without
+   inventing a separate visual language. GoabAppHeader v2 has no
+   slot for custom actions content, so the chip is laid over it via
+   a relatively-positioned wrapper instead of passed in as a child. */
+
+.app-header-row {
+  position: relative;
+}
+
+.user-chip {
+  position: absolute;
+  top: 50%;
+  right: var(--goa-space-l);
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--goa-space-xs);
+  width: 234px;
+  padding: var(--goa-space-xs);
+  border: var(--goa-border-width-s, 1px) solid var(--goa-color-greyscale-200);
+  border-radius: var(--goa-border-radius-m);
+  background: var(--goa-color-greyscale-white);
+}
+
+.user-chip-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--goa-border-radius-round);
+  background: var(--goa-color-greyscale-300);
+  color: var(--goa-color-greyscale-white);
+}
+
+.user-chip-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--goa-space-2xs);
+  flex: 1;
+  min-width: 0;
+}
+
+.user-chip-name {
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--goa-font-size-2);
+}
+
+.user-chip-email {
+  margin: 0;
+  font-size: var(--goa-font-size-1);
+  color: var(--goa-color-text-secondary);
+}
+
+/* ── Table ─────────────────────────────────────────────────── */
+
+.content-inner table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.content-inner table tbody tr:nth-child(odd) {
+  background: var(--goa-color-greyscale-100);
+}
+
+.content-inner table tbody tr:nth-child(even) {
+  background: var(--goa-color-greyscale-white);
+}
+
+.facility-link {
+  display: block;
+  color: var(--goa-color-interactive-default);
+  text-decoration: underline;
+  font-weight: 400;
+}
+
+.facility-link.static {
+  color: var(--goa-color-text-default);
+  cursor: default;
+}
+
+/* ── Drawer body ───────────────────────────────────────────── */
+
+.drawer-body {
+  padding-bottom: var(--goa-space-l);
+}
+
+.meta-grid {
+  display: flex;
+  gap: var(--goa-space-2xl);
+}
+
+.meta-label {
+  margin: 0;
+  color: var(--goa-color-text-secondary);
+  font-size: var(--goa-font-size-2);
+}
+
+.meta-value {
+  margin: 0;
+  font-weight: 700;
+}
+
+.meta-week-value {
+  margin: var(--goa-space-2xs) 0 0;
+  font-weight: 700;
+  font-size: var(--goa-font-size-5);
+  color: var(--goa-color-text-default);
+}
+
+/* ── Bed-type Yes/No list ──────────────────────────────────── */
+/* Rounded, bordered card — no zebra striping (unlike the reasons table
+   below, which keeps its zebra stripes when expanded), per Figma. */
+
+.bedtype-list {
+  border: var(--goa-border-width-s) solid var(--goa-color-greyscale-200);
+  border-radius: var(--goa-border-radius-2xl);
+  background: var(--goa-color-greyscale-white);
+  overflow: hidden;
+}
+
+.bedtype-total-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: var(--goa-space-m) var(--goa-space-l) var(--goa-space-m) var(--goa-space-m);
+  font-weight: 700;
+  font-size: var(--goa-font-size-5);
+  background: var(--goa-table-color-bg-heading);
+  border-bottom: var(--goa-border-width-s) solid var(--goa-color-greyscale-300);
+}
+
+.bedtype-total-row-headings {
+  display: flex;
+  gap: var(--goa-space-l);
+  text-align: right;
+  font-weight: 400;
+  font-size: var(--goa-font-size-2);
+  color: var(--goa-color-text-secondary);
+}
+
+/* Each row sits in its own wrapper (to host its accordion detail), so
+   :last-child can't target "the last row" here — every row is its own
+   parent's only child. A bottom border on all of them just doubles up
+   against the card's own border on the final row, which is harmless. */
+.bedtype-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--goa-space-l);
+  padding: var(--goa-space-m) var(--goa-space-l) var(--goa-space-m) var(--goa-space-m);
+  border-bottom: var(--goa-border-width-s) solid var(--goa-color-greyscale-200);
+}
+
+.bedtype-row-label {
+  flex: 1;
+}
+
+.bedtype-name {
+  margin: 0;
+  font-weight: 700;
+}
+
+.bedtype-subtitle {
+  margin: var(--goa-space-2xs) 0 0;
+  font-size: var(--goa-font-size-2);
+  color: var(--goa-color-text-secondary);
+}
+
+.bedtype-row goa-radio-group {
+  flex-shrink: 0;
+}
+
+/* ── Bed-type detail breakdown ────────────────────────────── */
+
+.bedtype-detail {
+  padding: var(--goa-space-m) var(--goa-space-s) var(--goa-space-l);
+}
+
+.detail-step-label {
+  margin: 0 0 var(--goa-space-2xs);
+  color: var(--goa-color-text-secondary);
+  font-size: var(--goa-font-size-2);
+}
+
+.bedtype-detail-subtitle {
+  margin: var(--goa-space-2xs) 0 0;
+  color: var(--goa-color-text-secondary);
+}
+
+/* Left accent bar + rounded, bordered box around the reasons breakdown,
+   per Figma (border-left: 3px #c2c2c2; box: 1px greyscale-200, 16px radius).
+   Only Option A's accordion uses this — Option B's wizard steps render
+   the table flush with no left bar or indent (see .reasons-table-flush). */
+.reasons-table-accent {
+  border-left: 3px solid #c2c2c2;
+  padding-left: var(--goa-space-l);
+  padding-right: var(--goa-space-m);
+}
+
+.reasons-table-flush {
+  padding: 0;
+}
+
+.reasons-table {
+  border: var(--goa-border-width-s) solid var(--goa-color-greyscale-200);
+  border-radius: var(--goa-border-radius-2xl);
+  background: var(--goa-color-greyscale-white);
+  overflow: hidden;
+}
+
+/* This week's vacancies exceed the type's funded-bed count. */
+.reasons-table.has-error {
+  border: var(--goa-border-width-m) solid var(--goa-color-interactive-error);
+}
+
+.reasons-error-message {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--goa-space-2xs);
+  margin-top: var(--goa-space-xs);
+  color: var(--goa-form-item-error-message-color);
+}
+
+.reasons-error-text {
+  margin: 0;
+  font-size: var(--goa-font-size-2);
+}
+
+.reasons-error-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--goa-space-3xs);
+  color: var(--goa-color-interactive-default);
+}
+
+.detail-col-headings-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: var(--goa-space-s) var(--goa-space-m);
+  font-size: var(--goa-font-size-2);
+  color: var(--goa-color-text-secondary);
+  background: var(--goa-table-color-bg-heading);
+  border-bottom: var(--goa-border-width-s) solid var(--goa-color-greyscale-300);
+}
+
+.detail-col-headings {
+  display: flex;
+  gap: var(--goa-space-l);
+  text-align: right;
+  font-size: var(--goa-font-size-2);
+  color: var(--goa-color-text-secondary);
+}
+
+.detail-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--goa-space-l);
+  padding: var(--goa-space-s) var(--goa-space-m);
+  border-bottom: var(--goa-border-width-s) solid var(--goa-color-greyscale-200);
+}
+
+.detail-row.shaded {
+  background: var(--goa-color-greyscale-100);
+}
+
+.detail-row-label {
+  flex: 1;
+}
+
+.detail-row-text {
+  margin: 0;
+  font-size: var(--goa-font-size-3);
+  line-height: var(--goa-line-height-2);
+  color: var(--goa-color-text-default);
+}
+
+.detail-row-sublabel {
+  margin: var(--goa-space-2xs) 0 0;
+  font-size: var(--goa-font-size-3);
+  line-height: var(--goa-line-height-2);
+  color: var(--goa-color-text-secondary);
+}
+
+.detail-row-inputs {
+  display: flex;
+  align-items: center;
+  gap: var(--goa-space-l);
+  flex-shrink: 0;
+}
+
+.detail-lastweek {
+  display: inline-block;
+  min-width: 24px;
+  text-align: right;
+  color: var(--goa-color-text-secondary);
+}
+
+.detail-total-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--goa-space-s) var(--goa-space-m);
+  border-top: var(--goa-border-width-s) solid var(--goa-color-greyscale-300);
+  font-weight: 700;
+}
+
+.detail-total-values {
+  display: flex;
+  gap: var(--goa-space-l);
+  min-width: 160px;
+}
+
+.detail-total-values span {
+  display: inline-block;
+  width: 140px;
+  text-align: right;
+}

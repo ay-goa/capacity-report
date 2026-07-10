@@ -1,0 +1,20 @@
+@import "@abgov/design-tokens/dist/tokens.css";
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--goa-color-greyscale-white, #fff);
+  -webkit-font-smoothing: antialiased;
+  font-family: var(--goa-font-family-sans);
+}
+
+button {
+  font-family: inherit;
+}
+
+p {
+  margin: 0;
+}
