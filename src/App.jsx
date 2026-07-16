@@ -324,8 +324,15 @@ function OptionADrawer({ facility, onClose, onSubmit }) {
   const [expandedTypeId, setExpandedTypeId] = useState(null);
   const rowRefs = useRef({});
 
+  // Entering a positive vacancy number for a type implies "yes" for that
+  // type's "Changes since last week?" answer, even if the row was expanded
+  // via the accordion caret rather than by selecting "Yes" first.
   function handleFieldChange(typeId, fieldKey, value) {
     setFields((prev) => ({ ...prev, [typeId]: { ...prev[typeId], [fieldKey]: value } }));
+    const numValue = Number(value);
+    if (value !== "" && !Number.isNaN(numValue) && numValue > 0) {
+      setChanges((prev) => (prev[typeId] === "yes" ? prev : { ...prev, [typeId]: "yes" }));
+    }
   }
 
   // Only one bed type's detail can be expanded at a time. Selecting "yes"
@@ -422,11 +429,7 @@ function OptionADrawer({ facility, onClose, onSubmit }) {
                 onYesClick={() => handleRequestExpand(bt.id)}
                 onToggleExpand={() => handleToggleExpand(bt.id)}
                 expanded={expandedTypeId === bt.id}
-                thisWeekTotal={
-                  expandedTypeId !== bt.id
-                    ? sumColumn(bt.items.map((item) => fields[bt.id][item.key]))
-                    : undefined
-                }
+                thisWeekTotal={sumColumn(bt.items.map((item) => fields[bt.id][item.key]))}
               />
               {expandedTypeId === bt.id && (
                 <BedTypeDetail
