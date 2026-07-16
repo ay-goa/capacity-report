@@ -81,6 +81,12 @@ function makeFieldState() {
   return state;
 }
 
+// Blank "this week" field values for a single bed type — used to clear any
+// entered vacancy numbers when the user answers "No" for that type.
+function blankFields(bedType) {
+  return Object.fromEntries(bedType.items.map((item) => [item.key, ""]));
+}
+
 /* ── Shared report header (inside the drawer) ─────────────────────────── */
 
 function ReportMetaHeader() {
@@ -112,26 +118,57 @@ function ReportMetaHeader() {
 
 /* ── Bed-type Yes/No row (shared by both flows) ───────────────────────── */
 
-function BedTypeRow({ bedType, value, onChange, shaded, rowRef, onYesClick, thisWeekTotal }) {
+function BedTypeRow({ bedType, value, onChange, shaded, rowRef, onYesClick, thisWeekTotal, expanded, onToggleExpand }) {
   // Once a type's detail has been filled in and collapsed (by expanding a
   // different type), show a summary badge here so the entered total stays
   // visible without re-expanding the row.
-  const showSummary = typeof thisWeekTotal === "number";
+  const showSummary = typeof thisWeekTotal === "number" && thisWeekTotal > 0;
+  // The accordion caret + click-to-toggle row are Option A-only (per Figma
+  // 02a.1-02a.3) — Option B's wizard steps don't pass these, so they're
+  // simply omitted there.
+  const showCaret = typeof expanded === "boolean";
+  const isToggleable = typeof onToggleExpand === "function";
   return (
-    <div className={`bedtype-row${shaded ? " shaded" : ""}`} ref={rowRef}>
-      <div className="bedtype-row-label">
-        <p className="bedtype-name">
-          {bedType.label} <GoabBadge type="important" emphasis="subtle" content={`${bedType.fundedBeds} funded beds`} />
-          {showSummary && (
-            <>
-              <GoabSpacer hSpacing="xs" />
-              <GoabBadge type="information" emphasis="subtle" content={`This week's vacancies: ${thisWeekTotal}`} />
-            </>
-          )}
-        </p>
-        <p className="bedtype-subtitle">
-          <strong>{bedType.subtitle}</strong> {bedType.description}
-        </p>
+    <div
+      className={`bedtype-row${shaded ? " shaded" : ""}${isToggleable ? " toggleable" : ""}`}
+      ref={rowRef}
+      onClick={
+        isToggleable
+          ? (e) => {
+              // Clicking the Yes/No answer itself is handled by its own
+              // onChange (and the re-open capture handler below) — only a
+              // click elsewhere on the row should toggle the accordion.
+              if (e.target.closest?.("goa-radio-group")) return;
+              onToggleExpand();
+            }
+          : undefined
+      }
+    >
+      <div className="bedtype-row-heading">
+        {showCaret && (
+          <button
+            type="button"
+            className={`bedtype-caret${expanded ? " expanded" : ""}`}
+            aria-expanded={expanded}
+            aria-label={`${expanded ? "Collapse" : "Expand"} ${bedType.label}`}
+          >
+            <GoabIcon type="chevron-down" size="medium" />
+          </button>
+        )}
+        <div className="bedtype-row-label">
+          <p className="bedtype-name">
+            {bedType.label} <GoabBadge type="important" emphasis="subtle" content={`${bedType.fundedBeds} funded beds`} />
+            {showSummary && (
+              <>
+                <GoabSpacer hSpacing="xs" />
+                <GoabBadge type="information" emphasis="subtle" content={`This week's vacancies: ${thisWeekTotal}`} />
+              </>
+            )}
+          </p>
+          <p className="bedtype-subtitle">
+            <strong>{bedType.subtitle}</strong> {bedType.description}
+          </p>
+        </div>
       </div>
       {/* onClickCapture re-opens an already-"yes" but collapsed accordion:
           native radios don't fire onChange when re-selecting the same value. */}
@@ -206,7 +243,28 @@ function BedTypeDetail({ bedType, fields, onFieldChange, stepLabel }) {
                   name={`${bedType.id}-${item.key}`}
                   value={fields[item.key] ?? ""}
                   width="140px"
-                  onChange={({ value }) => onFieldChange(bedType.id, item.key, value)}
+                  min={0}
+                  onChange={({ value }) => {
+                    // GoabInputNumber defaults `min` to Number.MIN_VALUE, so the
+                    // native stepper snaps an empty field to a subnormal float
+                    // (e.g. "5e-324") on the first click instead of stepping to
+                    // 1 — the `min={0}` above fixes the up-arrow case, but the
+                    // down-arrow-from-empty case still lands on 0 per spec, so
+                    // both are normalized to 1 here. Also clamps negatives to 0
+                    // and turns a cleared field's NaN back into "".
+                    const wasEmpty = fields[item.key] === "" || fields[item.key] == null;
+                    let next;
+                    if (value === undefined || value === null || Number.isNaN(value)) {
+                      next = "";
+                    } else if (wasEmpty && Math.abs(value) < 1e-10) {
+                      next = "1";
+                    } else if (value < 0) {
+                      next = "0";
+                    } else {
+                      next = String(value);
+                    }
+                    onFieldChange(bedType.id, item.key, next);
+                  }}
                 />
               </div>
             </div>
@@ -272,15 +330,27 @@ function OptionADrawer({ facility, onClose, onSubmit }) {
 
   // Only one bed type's detail can be expanded at a time. Selecting "yes"
   // on a type expands it and collapses whichever other type was open;
-  // selecting "no" on the currently expanded type collapses it.
+  // selecting "no" on the currently expanded type collapses it. "No" also
+  // clears any vacancy numbers already entered for that type, so a stale
+  // total can't linger behind a collapsed "No" row.
   function handleChangeAnswer(typeId, value) {
     setChanges((prev) => ({ ...prev, [typeId]: value }));
     setExpandedTypeId(value === "yes" ? typeId : (prev) => (prev === typeId ? null : prev));
+    if (value === "no") {
+      const bedType = bedTypes.find((bt) => bt.id === typeId);
+      setFields((prev) => ({ ...prev, [typeId]: blankFields(bedType) }));
+    }
   }
 
   // Re-clicking "yes" on a type that's already "yes" but collapsed re-opens it.
   function handleRequestExpand(typeId) {
     setExpandedTypeId(typeId);
+  }
+
+  // Clicking anywhere on a row (outside the Yes/No answer itself) toggles its
+  // accordion open/closed, independent of the answer — a true accordion.
+  function handleToggleExpand(typeId) {
+    setExpandedTypeId((prev) => (prev === typeId ? null : typeId));
   }
 
   // Whenever a bed type expands, scroll its row to the top of the drawer's
@@ -350,6 +420,8 @@ function OptionADrawer({ facility, onClose, onSubmit }) {
                 onChange={(v) => handleChangeAnswer(bt.id, v)}
                 rowRef={(el) => { rowRefs.current[bt.id] = el; }}
                 onYesClick={() => handleRequestExpand(bt.id)}
+                onToggleExpand={() => handleToggleExpand(bt.id)}
+                expanded={expandedTypeId === bt.id}
                 thisWeekTotal={
                   expandedTypeId !== bt.id
                     ? sumColumn(bt.items.map((item) => fields[bt.id][item.key]))
@@ -460,7 +532,14 @@ function OptionBDrawer({ facility, onClose, onSubmit }) {
                   bedType={bt}
                   shaded={i % 2 === 1}
                   value={changes[bt.id]}
-                  onChange={(v) => setChanges((prev) => ({ ...prev, [bt.id]: v }))}
+                  onChange={(v) => {
+                    setChanges((prev) => ({ ...prev, [bt.id]: v }));
+                    // Clear any entered vacancy numbers when the answer flips to
+                    // "No", so stale data can't resurface if "Yes" is re-selected.
+                    if (v === "no") {
+                      setFields((prev) => ({ ...prev, [bt.id]: blankFields(bt) }));
+                    }
+                  }}
                 />
               ))}
             </div>

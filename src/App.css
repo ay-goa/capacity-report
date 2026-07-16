@@ -199,6 +199,40 @@
   border-bottom: var(--goa-border-width-s) solid var(--goa-color-greyscale-200);
 }
 
+/* Option A-only: the whole row (outside the Yes/No answer) toggles the
+   accordion open/closed, per the true-accordion behavior requested. */
+.bedtype-row.toggleable {
+  cursor: pointer;
+}
+
+.bedtype-row-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--goa-space-xs);
+  flex: 1;
+  min-width: 0;
+}
+
+/* Option A-only accordion caret (per Figma 02a.1-02a.3); points right when
+   collapsed, rotates to point down when the row's detail is expanded. A real
+   <button> (not a <span>) so it's independently focusable/activatable —
+   its click bubbles up to the row's own toggle handler, so it needs no
+   handler of its own, just default-button-chrome reset. */
+.bedtype-caret {
+  display: inline-flex;
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  transform: rotate(-90deg);
+  transition: transform 0.2s ease;
+}
+
+.bedtype-caret.expanded {
+  transform: rotate(0deg);
+}
+
 .bedtype-row-label {
   flex: 1;
 }
